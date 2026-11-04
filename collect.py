@@ -102,15 +102,42 @@ def youtube(name, cache):
     return out
 
 
-def growth(hist, idx, now):
+def growth(hist, idx, now, days=30):
     """% change vs ~30 days ago (or the oldest snapshot if newer). Returns (pct, age_days)."""
     val = lambda e: e[idx] if len(e) > idx else None
     cur = val(hist[-1])
-    old = next((h for h in hist if h[0] >= (now - timedelta(days=30)).isoformat()), hist[0])
+    old = next((h for h in hist if h[0] >= (now - timedelta(days=days)).isoformat()), hist[0])
     age = (now - datetime.fromisoformat(old[0])).total_seconds() / 86400
     if age < 1 or not val(old) or cur is None:
         return 0.0, age
     return max(-100, min(1000, (cur / val(old) - 1) * 100)), age
+
+
+MODELS = [m for m in [os.environ.get("GEMINI_MODEL"), "gemini-3.6-flash", "gemini-3.5-flash", "gemini-2.5-flash"] if m]
+
+
+def ai_notes(rows):
+    """One Gemini call per day. Returns {artist: sentence}. Skipped if GEMINI_KEY is not set."""
+    key = os.environ.get("GEMINI_KEY")
+    if not key:
+        return {}
+    data = [{k: r[k] for k in ("n", "ml", "g", "pv", "tt", "yt", "sent", "disc", "sc", "peak")} for r in rows]
+    prompt = ("You read rap artist momentum numbers. ml=Last.fm listeners (millions); g=30d listener growth %; pv=Deezer fan growth %; "
+              "tt=Last.fm play growth %; yt=YouTube like ratio %; sent=comment mood -1..1; disc=YouTube view growth %; "
+              "sc=momentum score 0-100; peak=best past score. Growth of 0 usually means not enough history yet, so say that and never invent numbers. "
+              "For each artist write ONE plain sentence (max 25 words) on what the numbers suggest. "
+              'Reply with only JSON: {"artist name": "sentence"}.\n' + json.dumps(data))
+    body = json.dumps({"contents": [{"parts": [{"text": prompt}]}], "generationConfig": {"responseMimeType": "application/json"}}).encode()
+    for m in MODELS:
+        try:
+            req = urllib.request.Request("https://generativelanguage.googleapis.com/v1beta/models/%s:generateContent" % m, data=body,
+                                         headers={"Content-Type": "application/json", "x-goog-api-key": key})
+            with urllib.request.urlopen(req, timeout=90) as r:
+                t = json.loads(r.read())["candidates"][0]["content"]["parts"][0]["text"]
+            return {k: str(v)[:200] for k, v in json.loads(t).items()}
+        except Exception as e:
+            print("gemini", m, "failed:", str(e)[:100])
+    return {}
 
 
 def score(rows):
@@ -149,11 +176,12 @@ def main():
         cutoff = (now - timedelta(days=60)).isoformat()
         hist[n] = h = [x for x in h if x[0] >= cutoff]
         g, a1 = growth(h, 1, now)
+        g7, _ = growth(h, 1, now, 7)
         tt, _ = growth(h, 2, now)
         pv, _ = growth(h, 3, now) if dz else (0.0, 0)
         dc, _ = growth(h, 4, now)
         maxage = max(maxage, a1)
-        rows.append({"n": n, "lf": lf["lf"], "ml": round(lf["l"] / 1e6, 3), "g": g, "pv": pv, "tt": tt,
+        rows.append({"n": n, "lf": lf["lf"], "ml": round(lf["l"] / 1e6, 3), "g": g, "g7": g7, "s": [[x[0][:16], x[1]] for x in h[::max(1, len(h) // 40)]], "pv": pv, "tt": tt,
                      "yt": yt.get("yt"), "sent": yt.get("sent"), "disc": dc})
         time.sleep(.2)
     if len(rows) < 3:
@@ -168,9 +196,17 @@ def main():
     for r in rows:
         peaks[r["n"]] = max(peaks.get(r["n"], 0), r["sc"])
         r["peak"] = peaks[r["n"]]
-        for k in ("g", "pv", "tt", "yt", "disc"):
+        for k in ("g", "g7", "pv", "tt", "yt", "disc"):
             r[k] = round(r[k], 1)
         r["sent"] = round(r["sent"], 2)
+    today = now.strftime("%Y-%m-%d")
+    ai = state.get("ai", {})
+    if ai.get("d") != today:
+        notes = ai_notes(rows)
+        if notes:
+            ai = state["ai"] = {"d": today, "n": notes}
+    for r in rows:
+        r["ai"] = ai.get("n", {}).get(r["n"], "")
         del r["sc"]
     json.dump({"updated": now.isoformat(), "history_days": round(maxage, 1), "artists": rows, "unmatched": unmatched},
               open("data.json", "w"), separators=(",", ":"))

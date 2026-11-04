@@ -152,7 +152,7 @@ fetch("data.json?"+Date.now()).then(r=>r.json()).then(j=>{
  if(j.unmatched&&j.unmatched.length)f+="Couldn’t match on Last.fm: "+j.unmatched.map(esc).join(", ")+".";
  $("#foot").innerHTML=f;view();
 }).catch(()=>view());
-view();
+
 </script>
 </body>
 </html>

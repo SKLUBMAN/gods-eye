@@ -31,7 +31,7 @@ def q(**p): return urllib.parse.urlencode(p)
 def lastfm(name):
     j = get("https://ws.audioscrobbler.com/2.0/?" + q(method="artist.search", artist=name, api_key=LFM, format="json", limit=10))
     res = (((j or {}).get("results") or {}).get("artistmatches") or {}).get("artist") or []
-    c = [x for x in res if sim(x.get("name", ""), name) >= .9]
+    c = [x for x in res if norm(x.get("name", "")) == norm(name)]
     pick = max(c, key=lambda x: int(x.get("listeners", 0) or 0))["name"] if c else name
     j = get("https://ws.audioscrobbler.com/2.0/?" + q(method="artist.getinfo", artist=pick, api_key=LFM, format="json", autocorrect=1))
     a = (j or {}).get("artist")

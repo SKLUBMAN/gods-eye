@@ -101,9 +101,9 @@ function score(d){
 }
 function view(){
   const all=score(data);let rows;
-  if(tab==="rise"){rows=all.filter(a=>a.g>0).sort((a,b)=>b.sc-a.sc);$("#legend").textContent="Ranked by momentum score. The white tick is each artist’s all-time peak."}
+  if(tab==="rise"){rows=all.filter(a=>a.g>=0).sort((a,b)=>b.sc-a.sc);$("#legend").textContent="Ranked by momentum score. The white tick is each artist’s all-time peak."}
   else if(tab==="fade"){rows=all.filter(a=>a.drift<-.12).sort((a,b)=>a.drift-b.drift);$("#legend").textContent="Artists sitting well below their own peak. Baselines may still be big."}
-  else{rows=all.filter(a=>a.ml<=1.5&&a.g>0).sort((a,b)=>b.sc-a.sc);$("#legend").textContent="Smaller artists (under 1.5M Last.fm listeners) whose numbers are climbing."}
+  else{rows=all.filter(a=>a.ml<=1.5&&a.g>=0).sort((a,b)=>b.sc-a.sc);$("#legend").textContent="Smaller artists (under 1.5M Last.fm listeners) whose numbers are climbing."}
   $("#list").innerHTML=rows.length?rows.map((a,i)=>{
     const dr=Math.round(a.drift*100),col=tab==="fade"?"var(--dn)":"var(--up)";
     return `<button class="row" data-i="${all.indexOf(a)}"><div class="r1"><span class="nm">${esc(a.n)}</span><span class="ml">${a.ml}M on Last.fm</span><span class="sc">${a.sc}</span></div>

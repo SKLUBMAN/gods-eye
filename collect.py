@@ -1,7 +1,6 @@
 """God's Eye collector. Runs on GitHub Actions, writes data.json and state.json.
 Needs env vars LASTFM_KEY (required) and YOUTUBE_KEY (optional)."""
 import os, re, json, time, difflib, statistics, urllib.request, urllib.parse
-import xml.etree.ElementTree as ET
 from datetime import datetime, timezone, timedelta
 
 LFM = os.environ.get("LASTFM_KEY", "")
@@ -103,26 +102,6 @@ def youtube(name, cache):
     return out
 
 
-def get_leaked_cx_data(artist_name):
-    """Fetches recent leak/snippet thread titles matching the artist."""
-    query = urllib.parse.quote(f'site:leaked.cx "{artist_name}" OR ("{artist_name}" leak) OR ("{artist_name}" snippet)')
-    rss_url = f"https://news.google.com/rss/search?q={query}&hl=en-US&gl=US&ceid=US:en"
-    leaks = []
-    try:
-        req = urllib.request.Request(rss_url, headers={"User-Agent": "gods-eye/1.0"})
-        with urllib.request.urlopen(req, timeout=10) as resp:
-            xml_data = resp.read()
-            root = ET.fromstring(xml_data)
-            for item in root.findall('.//item')[:3]:
-                title = item.find('title').text if item.find('title') is not None else ""
-                link = item.find('link').text if item.find('link') is not None else ""
-                if title:
-                    leaks.append({"title": title, "link": link})
-    except Exception as e:
-        print(f"[{artist_name}] Leak fetch warning: {e}")
-    return leaks
-
-
 def growth(hist, idx, now, days=30):
     """% change vs ~30 days ago (or the oldest snapshot if newer). Returns (pct, age_days)."""
     val = lambda e: e[idx] if len(e) > idx else None
@@ -152,50 +131,4 @@ def ai_notes(rows):
     for m in MODELS:
         try:
             req = urllib.request.Request("https://generativelanguage.googleapis.com/v1beta/models/%s:generateContent" % m, data=body,
-                                         headers={"Content-Type": "application/json", "x-goog-api-key": key})
-            with urllib.request.urlopen(req, timeout=90) as r:
-                t = json.loads(r.read())["candidates"][0]["content"]["parts"][0]["text"]
-            return {k: str(v)[:200] for k, v in json.loads(t).items()}
-        except Exception as e:
-            print("gemini", m, "failed:", str(e)[:100])
-    return {}
-
-
-def score(rows):
-    mn, mx = {}, {}
-    for k in W:
-        v = [r[k] for r in rows]
-        mn[k], mx[k] = min(v), max(v)
-    for r in rows:
-        s = 0
-        for k in W:
-            p = .5 if mx[k] == mn[k] else (r[k] - mn[k]) / (mx[k] - mn[k])
-            s += p * W[k]
-        r["sc"] = round(s * 100)
-
-
-def main():
-    if not LFM:
-        raise SystemExit("Missing LASTFM_KEY secret")
-    names = [x.strip() for x in open("artists.txt") if x.strip()]
-    
-      for k in ("g", "g7", "pv", "tt", "yt", "disc"):
-            r[k] = round(r[k], 1)
-        r["sent"] = round(r["sent"], 2)
-    today = now.strftime("%Y-%m-%d")
-    ai = state.get("ai", {})
-    if ai.get("d") != today:
-        notes = ai_notes(rows)
-        if notes:
-            ai = state["ai"] = {"d": today, "n": notes}
-    for r in rows:
-        r["ai"] = ai.get("n", {}).get(r["n"], "")
-        del r["sc"]
-    json.dump({"updated": now.isoformat(), "history_days": round(maxage, 1), "artists": rows, "unmatched": unmatched},
-              open("data.json", "w"), separators=(",", ":"))
-    json.dump(state, open("state.json", "w"), separators=(",", ":"))
-    print(f"ok: {len(rows)} artists, {len(unmatched)} unmatched")
-
-
-if __name__ == "__main__":
-    main()
+                                         headers={"

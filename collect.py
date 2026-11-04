@@ -1,6 +1,7 @@
 """God's Eye collector. Runs on GitHub Actions, writes data.json and state.json.
 Needs env vars LASTFM_KEY (required) and YOUTUBE_KEY (optional)."""
 import os, re, json, time, difflib, statistics, urllib.request, urllib.parse
+import xml.etree.ElementTree as ET
 from datetime import datetime, timezone, timedelta
 
 LFM = os.environ.get("LASTFM_KEY", "")
@@ -102,6 +103,26 @@ def youtube(name, cache):
     return out
 
 
+def get_leaked_cx_data(artist_name):
+    """Fetches recent snippet, leak, and unreleased thread titles matching the artist."""
+    query = urllib.parse.quote(f'site:leaked.cx "{artist_name}" OR ("{artist_name}" leak) OR ("{artist_name}" snippet)')
+    rss_url = f"https://news.google.com/rss/search?q={query}&hl=en-US&gl=US&ceid=US:en"
+    leaks = []
+    try:
+        req = urllib.request.Request(rss_url, headers={"User-Agent": "gods-eye/1.0"})
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            xml_data = resp.read()
+            root = ET.fromstring(xml_data)
+            for item in root.findall('.//item')[:3]:
+                title = item.find('title').text if item.find('title') is not None else ""
+                link = item.find('link').text if item.find('link') is not None else ""
+                if title:
+                    leaks.append({"title": title, "link": link})
+    except Exception as e:
+        print(f"[{artist_name}] Leak fetch warning: {e}")
+    return leaks
+
+
 def growth(hist, idx, now, days=30):
     """% change vs ~30 days ago (or the oldest snapshot if newer). Returns (pct, age_days)."""
     val = lambda e: e[idx] if len(e) > idx else None
@@ -170,6 +191,7 @@ def main():
             continue
         dz = deezer(n)
         yt = youtube(n, chans) if YT else {}
+        leaks = get_leaked_cx_data(n)
         h = hist.setdefault(n, [])
         if not h or (now - datetime.fromisoformat(h[-1][0])).total_seconds() > 5 * 3600:
             h.append([now.isoformat(), lf["l"], lf["p"], dz, yt.get("views")])
@@ -181,8 +203,12 @@ def main():
         pv, _ = growth(h, 3, now) if dz else (0.0, 0)
         dc, _ = growth(h, 4, now)
         maxage = max(maxage, a1)
-        rows.append({"n": n, "lf": lf["lf"], "ml": round(lf["l"] / 1e6, 3), "g": g, "g7": g7, "s": [[x[0][:16], x[1]] for x in h[::max(1, len(h) // 40)]], "pv": pv, "tt": tt,
-                     "yt": yt.get("yt"), "sent": yt.get("sent"), "disc": dc})
+        rows.append({
+            "n": n, "lf": lf["lf"], "ml": round(lf["l"] / 1e6, 3), "g": g, "g7": g7, 
+            "s": [[x[0][:16], x[1]] for x in h[::max(1, len(h) // 40)]], "pv": pv, "tt": tt,
+            "yt": yt.get("yt"), "sent": yt.get("sent"), "disc": dc,
+            "leaks": leaks
+        })
         time.sleep(.2)
     if len(rows) < 3:
         raise SystemExit("Fewer than 3 artists matched. Check LASTFM_KEY and artists.txt")

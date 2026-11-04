@@ -17,6 +17,7 @@ jobs:
         env:
           LASTFM_KEY: ${{ secrets.LASTFM_KEY }}
           YOUTUBE_KEY: ${{ secrets.YOUTUBE_KEY }}
+          GEMINI_KEY: ${{ secrets.GEMINI_KEY }}
       - name: Save results
         run: |
           git config user.name "gods-eye-bot"
@@ -26,4 +27,3 @@ jobs:
             git commit -m "update data"
             git push
           fi
-          

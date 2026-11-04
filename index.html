@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>God’s Eye</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@500;700;800&display=swap">
+<style>
+:root{--bg:#0f1022;--panel:#181a33;--line:#2a2d52;--tx:#ece9ff;--mut:#9a98c4;--up:#ffb547;--dn:#ff5d73;--ok:#7fe0c3;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0f1022}}
+@media(prefers-color-scheme:light){:root:not([data-theme="dark"]){--bg:#f4f2ff;--panel:#fff;--line:#d9d5f5;--tx:#1b1840;--mut:#625f8f;--up:#c46f00;--dn:#c8243d;--ok:#12806a}}
+:root[data-theme="dark"]{--bg:#0f1022}
+*{box-sizing:border-box}html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.45 "Bricolage Grotesque",system-ui,sans-serif;max-width:560px;margin-inline:auto;padding:16px 14px 90px}
+header{display:flex;align-items:center;gap:10px;margin-bottom:4px}
+h1{font-size:26px;margin:0;font-weight:800;letter-spacing:-.5px}
+.tag{margin-left:auto;font-size:12px;color:var(--mut);border:1px solid var(--line);border-radius:99px;padding:3px 10px}
+.sub{color:var(--mut);margin:0 0 14px;font-size:14px}
+nav{display:flex;gap:6px;margin-bottom:12px;position:sticky;top:env(safe-area-inset-top,0px);background:var(--bg);padding:6px 0;z-index:2}
+nav button{flex:1;padding:10px 4px;border:1px solid var(--line);background:none;color:var(--mut);border-radius:10px;font:inherit;font-weight:700}
+nav button[aria-selected=true]{background:var(--tx);color:var(--bg);border-color:var(--tx)}
+.row{display:block;width:100%;text-align:left;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:12px 14px;margin-bottom:8px;color:inherit;font:inherit}
+.r1{display:flex;align-items:baseline;gap:8px}.nm{font-weight:700;font-size:17px}.ml{color:var(--mut);font-size:13px}
+.sc{margin-left:auto;font-size:26px;font-weight:800}
+.bar{position:relative;height:8px;border-radius:9px;background:var(--line);margin:8px 0 6px}
+.bar i{position:absolute;left:0;top:0;bottom:0;border-radius:9px}
+.bar b{position:absolute;top:-4px;width:2px;height:16px;background:var(--tx);opacity:.8}
+.r2{display:flex;justify-content:space-between;font-size:13px;color:var(--mut)}
+.up{color:var(--up)}.dn{color:var(--dn)}.ok{color:var(--ok)}
+.empty{color:var(--mut);padding:24px 4px;text-align:center}
+.tools{display:flex;gap:6px;margin-bottom:8px}.tools input,.tools select{background:var(--panel);color:var(--tx);border:1px solid var(--line);border-radius:10px;padding:10px;font:inherit}.tools input{flex:1;min-width:0}
+.legend{font-size:12px;color:var(--mut);margin:2px 2px 10px}
+.fab{position:fixed;right:14px;bottom:calc(14px + env(safe-area-inset-bottom,0px));background:var(--tx);color:var(--bg);border:0;border-radius:99px;padding:12px 18px;font:inherit;font-weight:700}
+.sheet{position:fixed;inset:0;background:rgba(5,5,20,.6);display:none;align-items:flex-end;z-index:5}
+.sheet.on{display:flex}
+.card{background:var(--panel);width:100%;max-width:560px;margin:auto;border-radius:20px 20px 0 0;padding:18px 16px calc(18px + env(safe-area-inset-bottom,0px));max-height:88%;overflow:auto}
+.card h2{margin:0 0 2px;font-size:22px}
+.m{display:grid;grid-template-columns:110px 1fr 38px;gap:8px;align-items:center;font-size:13px;margin:6px 0}
+.m .bar{margin:0}
+.read{border-left:3px solid var(--up);padding:2px 0 2px 10px;margin:14px 0}
+textarea{width:100%;height:170px;background:var(--bg);color:var(--tx);border:1px solid var(--line);border-radius:10px;padding:8px;font:12px/1.4 ui-monospace,monospace}
+.btns{display:flex;gap:8px;margin-top:10px}.btns button{flex:1;padding:11px;border-radius:10px;border:1px solid var(--line);background:none;color:var(--tx);font:inherit;font-weight:700}
+.btns .go{background:var(--tx);color:var(--bg)}
+.note{font-size:12px;color:var(--mut)}
+:focus-visible{outline:2px solid var(--up);outline-offset:2px}
+</style>
+</head>
+<body>
+<header>
+<svg width="34" height="34" viewBox="0 0 34 34" aria-hidden="true"><path d="M2 17C7 8 12 5 17 5s10 3 15 12c-5 9-10 12-15 12S7 26 2 17Z" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="17" cy="17" r="6" fill="var(--up)"/><circle cx="17" cy="17" r="2.4" fill="var(--bg)"/></svg>
+<h1>God’s Eye</h1><span class="tag" id="tag">Sample data</span>
+</header>
+<p class="sub">Who’s rising, who’s fading, and who’s about to break out.</p>
+<nav role="tablist" id="tabs">
+<button role="tab" data-t="rise" aria-selected="true">Rising</button>
+<button role="tab" data-t="fade" aria-selected="false">Fading</button>
+<button role="tab" data-t="disc" aria-selected="false">Discovery</button>
+</nav>
+<div class="tools"><input id="q" type="search" placeholder="Search artists" aria-label="Search artists"><select id="sort" aria-label="Sort"><option value="sc">Default order</option><option value="ml">Listeners</option><option value="g">Growth</option><option value="drift">Vs peak</option></select></div>
+<div class="legend" id="legend"></div>
+<main id="list"></main><p class="note" id="foot"></p>
+
+
+<div class="sheet" id="sheet"><div class="card" id="card"></div></div>
+
+<script>
+// Sample data is invented. ml = monthly listeners (millions), g = 30-day listener growth %,
+// pv = playlist add velocity (0-100), yt = YouTube like ratio %, sent = comment sentiment (-1 to 1),
+// disc = change in online discussion %, tt = TikTok/Shazam sound growth %, org = share of organic growth (0-1),
+// peak = the artist’s best-ever momentum score.
+const SAMPLE=[
+{n:"Vanta Reyes",ml:18.2,g:2,pv:55,yt:5.1,sent:.45,disc:4,tt:6,org:.6,peak:82},
+{n:"Kilo Marlowe",ml:6.4,g:31,pv:88,yt:7.2,sent:.7,disc:120,tt:210,org:.82,peak:74},
+{n:"Juno Pike",ml:2.1,g:64,pv:79,yt:8.4,sent:.78,disc:210,tt:340,org:.9,peak:70},
+{n:"Dre Halloway",ml:21.5,g:-9,pv:30,yt:3.9,sent:.05,disc:-22,tt:-35,org:.5,peak:93},
+{n:"Mirage Ono",ml:.9,g:88,pv:72,yt:9.1,sent:.81,disc:160,tt:260,org:.93,peak:61},
+{n:"Santo Vega",ml:12.7,g:-14,pv:24,yt:4.2,sent:-.1,disc:-40,tt:-52,org:.45,peak:88},
+{n:"Lux Bellamy",ml:4.8,g:12,pv:61,yt:6.3,sent:.52,disc:30,tt:44,org:.7,peak:66},
+{n:"Ace Tomlin",ml:9.9,g:-3,pv:41,yt:4.8,sent:.2,disc:-8,tt:-12,org:.55,peak:79},
+{n:"Noor Calder",ml:1.4,g:47,pv:66,yt:8.8,sent:.74,disc:140,tt:190,org:.88,peak:58},
+{n:"Boone Rivas",ml:15.3,g:6,pv:58,yt:5.6,sent:.38,disc:12,tt:22,org:.58,peak:84},
+{n:"Tez Okafor",ml:3.3,g:-18,pv:19,yt:4.0,sent:-.25,disc:-55,tt:-60,org:.4,peak:72},
+{n:"Pria Lund",ml:.6,g:112,pv:70,yt:9.4,sent:.85,disc:300,tt:410,org:.95,peak:55},
+{n:"Rook Ames",ml:7.8,g:19,pv:74,yt:6.9,sent:.6,disc:75,tt:98,org:.76,peak:77},
+{n:"Cade Winslow",ml:11.1,g:-6,pv:36,yt:4.4,sent:.1,disc:-15,tt:-20,org:.52,peak:90}
+];
+const W={g:.22,pv:.14,yt:.12,sent:.16,disc:.14,tt:.22};
+const LBL={g:"Last.fm listeners",pv:"Deezer fan growth",yt:"YouTube likes",sent:"Comment mood",disc:"YouTube view trend",tt:"Last.fm plays"};
+let data=SAMPLE.slice(),tab="rise",Q="",SORT="sc";
+const $=s=>document.querySelector(s);
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+
+function score(d){
+  const keys=Object.keys(W),mn={},mx={};
+  keys.forEach(k=>{const v=d.map(a=>+a[k]||0);mn[k]=Math.min(...v);mx[k]=Math.max(...v)});
+  return d.map(a=>{
+    const parts={};let s=0;
+    keys.forEach(k=>{const p=mx[k]===mn[k]?.5:((+a[k]||0)-mn[k])/(mx[k]-mn[k]);parts[k]=Math.round(p*100);s+=p*W[k]});
+    const sc=Math.round(s*100),pk=+a.peak||sc;
+    return {...a,sc,parts,drift:(sc-pk)/pk};
+  });
+}
+function view(){
+  const all=score(data);let rows;
+  if(tab==="rise"){rows=all.filter(a=>a.g>=0).sort((a,b)=>b.sc-a.sc);$("#legend").textContent="Ranked by momentum score. The white tick is each artist’s all-time peak."}
+  else if(tab==="fade"){rows=all.filter(a=>a.drift<-.12).sort((a,b)=>a.drift-b.drift);$("#legend").textContent="Artists sitting well below their own peak. Baselines may still be big."}
+  else{rows=all.filter(a=>a.ml<=1.5&&(a.g7||0)>=0).sort((a,b)=>((b.g7||0)-(a.g7||0))||(b.sc-a.sc));$("#legend").textContent="Smaller artists (under 1.5M Last.fm listeners), ranked by growth over the last 7 days."}
+  rows=rows.filter(a=>a.n.toLowerCase().includes(Q));
+  if(SORT!=="sc")rows.sort((a,b)=>(SORT==="drift"?b.drift-a.drift:(b[SORT]||0)-(a[SORT]||0)));
+  $("#list").innerHTML=rows.length?rows.map((a,i)=>{
+    const dr=Math.round(a.drift*100),col=tab==="fade"?"var(--dn)":"var(--up)";
+    return `<button class="row" data-i="${all.indexOf(a)}"><div class="r1"><span class="nm">${esc(a.n)}</span><span class="ml">${a.ml}M on Last.fm</span><span class="sc">${a.sc}</span></div>
+<div class="bar"><i style="width:${a.sc}%;background:${col}"></i><b style="left:calc(${Math.min(100,a.peak)}% - 1px)"></b></div>
+<div class="r2"><span class="${a.g>=0?"ok":"dn"}">${a.g>=0?"+":""}${Math.round(a.g)}% listeners</span><span class="${dr<-12?"dn":"ok"}">${dr>0?"+":""}${dr}% vs peak</span></div></button>`}).join(""):'<div class="empty">Nobody matches this view yet. Edit the data to add artists.</div>';
+  window._all=all;
+}
+function read(a){
+  const t=[];
+  if(a.drift<-.25)t.push("Well off their peak. Even if the audience is large, new activity is running below what they used to pull.");
+  else if(a.drift<-.1)t.push("Slipping from their peak, but not collapsing.");
+  else t.push("Operating close to or above their previous best.");
+  if(a.g>40&&a.ml<1.5)t.push("Fast, mostly organic growth. This is the pattern of an artist breaking out.");
+  else if(a.g<0&&a.sent<.15)t.push("Listeners are dropping and the comments are cooling. Both point the same way.");
+  if(a.tt>150)t.push("Sound usage on TikTok and Shazam is spiking, which usually leads streams.");
+  if(a.disc<-30)t.push("People are talking about them a lot less than before.");
+  return t.join(" ");
+}
+function open(i){
+  const a=window._all[i];
+  $("#card").innerHTML=`<h2>${esc(a.n)}</h2><div class="note">${a.ml}M Last.fm listeners · score ${a.sc} · peak ${a.peak}${a.lf?" · matched “"+esc(a.lf)+"” on Last.fm":""}</div>
+${Object.keys(W).map(k=>`<div class="m"><span>${LBL[k]}</span><div class="bar"><i style="width:${a.parts[k]}%;background:var(--up)"></i></div><span>${a.parts[k]}</span></div>`).join("")}
+${spark(a)}<div class="read">${a.ai?"<b>AI read:</b> "+esc(a.ai):read(a)}</div>
+<p class="note">${a.ai?"The AI read is written by Gemini from these numbers and can be wrong.":"This read comes from simple rules on the numbers above."} It can’t judge how good the music is, only how the numbers are moving. If the numbers look wrong, check the matched name above is the right artist.</p>
+<div class="btns"><button class="go" id="x">Close</button></div>`;
+  $("#sheet").classList.add("on");$("#x").onclick=close;
+}
+function spark(a){
+  const s=(a.s||[]).map(p=>p[1]);
+  if(s.length<2)return '<p class="note">The listener chart appears after a day or two of tracking.</p>';
+  const mn=Math.min(...s),r=(Math.max(...s)-mn)||1;
+  const pts=s.map((v,i)=>(i/(s.length-1)*300).toFixed(1)+","+(46-(v-mn)/r*40).toFixed(1)).join(" ");
+  return `<div class="note">Last.fm listeners, ${a.s[0][0].slice(5,10)} to ${a.s[a.s.length-1][0].slice(5,10)}</div><svg viewBox="0 0 300 50" width="100%" height="70" preserveAspectRatio="none" role="img" aria-label="Listener trend"><polyline points="${pts}" fill="none" stroke="var(--up)" stroke-width="2" vector-effect="non-scaling-stroke"/></svg>`;
+}
+function close(){$("#sheet").classList.remove("on")}
+function editor(){
+  $("#card").innerHTML=`<h2>Your data</h2><p class="note">Paste a JSON list of artists to replace the sample. Fields: n, ml, g, pv, yt, sent, disc, tt, org, peak.</p>
+<textarea id="ta" spellcheck="false">${esc(JSON.stringify(data,null,1))}</textarea><div class="note" id="err" style="color:var(--dn)"></div>
+<div class="btns"><button id="rs">Reset sample</button><button class="go" id="ap">Apply</button></div>`;
+  $("#sheet").classList.add("on");
+  $("#rs").onclick=()=>{location.reload()};
+  $("#ap").onclick=()=>{try{const d=JSON.parse($("#ta").value);if(!Array.isArray(d)||d.length<3)throw Error("Need a list of at least 3 artists.");data=d;$("#tag").textContent="Your data";view();close()}catch(e){$("#err").textContent="Couldn’t read that: "+e.message}};
+}
+$("#tabs").onclick=e=>{const b=e.target.closest("button");if(!b)return;tab=b.dataset.t;document.querySelectorAll("#tabs button").forEach(x=>x.setAttribute("aria-selected",x===b));view()};
+$("#list").onclick=e=>{const r=e.target.closest(".row");if(r)open(+r.dataset.i)};
+$("#q").oninput=e=>{Q=e.target.value.toLowerCase();view()};$("#sort").onchange=e=>{SORT=e.target.value;view()};
+$("#sheet").onclick=e=>{if(e.target.id==="sheet")close()};
+fetch("data.json?"+Date.now()).then(r=>r.json()).then(j=>{
+ if(!j.artists||j.artists.length<3)throw 0;
+ data=j.artists;
+ $("#tag").textContent="Updated "+new Date(j.updated).toLocaleString([],{month:"short",day:"numeric",hour:"numeric",minute:"2-digit"});
+ let f=j.history_days<2?"Growth and peak numbers fill in after a few days of tracking. Until then rankings lean on YouTube data. ":"";
+ if(j.unmatched&&j.unmatched.length)f+="Couldn’t match on Last.fm: "+j.unmatched.map(esc).join(", ")+".";
+ $("#foot").innerHTML=f;view();
+}).catch(()=>view());
+</script>
+</body>
+</html>

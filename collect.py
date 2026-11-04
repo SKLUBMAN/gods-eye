@@ -104,7 +104,7 @@ def youtube(name, cache):
 
 
 def get_leaked_cx_data(artist_name):
-    """Fetches recent snippet, leak, and unreleased thread titles matching the artist."""
+    """Fetches recent leak/snippet thread titles matching the artist."""
     query = urllib.parse.quote(f'site:leaked.cx "{artist_name}" OR ("{artist_name}" leak) OR ("{artist_name}" snippet)')
     rss_url = f"https://news.google.com/rss/search?q={query}&hl=en-US&gl=US&ceid=US:en"
     leaks = []
@@ -177,52 +177,8 @@ def score(rows):
 def main():
     if not LFM:
         raise SystemExit("Missing LASTFM_KEY secret")
-    names = [x.strip() for x in open("artists.txt") if x.strip()]
-    state = json.load(open("state.json")) if os.path.exists("state.json") else {}
-    if state.get("v") != 2:
-        state = {"v": 2, "channels": state.get("channels", {})}
-    chans, hist, peaks = state.setdefault("channels", {}), state.setdefault("hist", {}), state.setdefault("peak", {})
-    now = datetime.now(timezone.utc)
-    rows, unmatched, maxage = [], [], 0
-    for n in names:
-        lf = lastfm(n)
-        if not lf:
-            unmatched.append(n)
-            continue
-        dz = deezer(n)
-        yt = youtube(n, chans) if YT else {}
-        leaks = get_leaked_cx_data(n)
-        h = hist.setdefault(n, [])
-        if not h or (now - datetime.fromisoformat(h[-1][0])).total_seconds() > 5 * 3600:
-            h.append([now.isoformat(), lf["l"], lf["p"], dz, yt.get("views")])
-        cutoff = (now - timedelta(days=60)).isoformat()
-        hist[n] = h = [x for x in h if x[0] >= cutoff]
-        g, a1 = growth(h, 1, now)
-        g7, _ = growth(h, 1, now, 7)
-        tt, _ = growth(h, 2, now)
-        pv, _ = growth(h, 3, now) if dz else (0.0, 0)
-        dc, _ = growth(h, 4, now)
-        maxage = max(maxage, a1)
-        rows.append({
-            "n": n, "lf": lf["lf"], "ml": round(lf["l"] / 1e6, 3), "g": g, "g7": g7, 
-            "s": [[x[0][:16], x[1]] for x in h[::max(1, len(h) // 40)]], "pv": pv, "tt": tt,
-            "yt": yt.get("yt"), "sent": yt.get("sent"), "disc": dc,
-            "leaks": leaks
-        })
-        time.sleep(.2)
-    if len(rows) < 3:
-        raise SystemExit("Fewer than 3 artists matched. Check LASTFM_KEY and artists.txt")
-    for k in ("yt", "sent"):  # missing values become the group median
-        have = [r[k] for r in rows if r[k] is not None]
-        med = statistics.median(have) if have else 0
-        for r in rows:
-            if r[k] is None:
-                r[k] = med
-    score(rows)
-    for r in rows:
-        peaks[r["n"]] = max(peaks.get(r["n"], 0), r["sc"])
-        r["peak"] = peaks[r["n"]]
-        for k in ("g", "g7", "pv", "tt", "yt", "disc"):
+    names = [x.strip() for x in open("artists.txt") if
+      for k in ("g", "g7", "pv", "tt", "yt", "disc"):
             r[k] = round(r[k], 1)
         r["sent"] = round(r["sent"], 2)
     today = now.strftime("%Y-%m-%d")

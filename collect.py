@@ -29,12 +29,19 @@ def q(**p): return urllib.parse.urlencode(p)
 
 
 def lastfm(name):
-    j = get("https://ws.audioscrobbler.com/2.0/?" + q(method="artist.getinfo", artist=name, api_key=LFM, format="json", autocorrect=1))
+    j = get("https://ws.audioscrobbler.com/2.0/?" + q(method="artist.search", artist=name, api_key=LFM, format="json", limit=10))
+    res = (((j or {}).get("results") or {}).get("artistmatches") or {}).get("artist") or []
+    c = [x for x in res if sim(x.get("name", ""), name) >= .9]
+    pick = max(c, key=lambda x: int(x.get("listeners", 0) or 0))["name"] if c else name
+    j = get("https://ws.audioscrobbler.com/2.0/?" + q(method="artist.getinfo", artist=pick, api_key=LFM, format="json", autocorrect=1))
     a = (j or {}).get("artist")
     if not a or sim(a.get("name", ""), name) < .8:
         return None
     s = a.get("stats", {})
-    return {"lf": a["name"], "l": int(s.get("listeners", 0)), "p": int(s.get("playcount", 0))}
+    l = int(s.get("listeners", 0))
+    if l < 1000:
+        return None
+    return {"lf": a["name"], "l": l, "p": int(s.get("playcount", 0))}
 
 
 def deezer(name):
@@ -73,6 +80,7 @@ def youtube(name, cache):
         return out
     st = it["statistics"]
     out["subs"] = int(st.get("subscriberCount", 0))
+    out["views"] = int(st.get("viewCount", 0))
     up = it["contentDetails"]["relatedPlaylists"]["uploads"]
     pl = ytapi("playlistItems", part="contentDetails", playlistId=up, maxResults=8)
     ids = [x["contentDetails"]["videoId"] for x in (pl or {}).get("items", [])]
@@ -83,9 +91,6 @@ def youtube(name, cache):
     likes = [int(v["statistics"].get("likeCount", 0)) for v in vs]
     if sum(views):
         out["yt"] = sum(likes) / sum(views) * 100
-        life = int(st.get("viewCount", 0)) / max(1, int(st.get("videoCount", 1)))
-        if life:
-            out["disc"] = max(-100, min(1000, (sum(views) / len(views) / life - 1) * 100))
     cm = ytapi("commentThreads", part="snippet", videoId=ids[0], maxResults=50, order="relevance")
     pos = neg = 0
     for c in (cm or {}).get("items", []):
@@ -93,18 +98,19 @@ def youtube(name, cache):
             pos += w in POS
             neg += w in NEG
     if pos + neg:
-        out["sent"] = (pos - neg) / (pos + neg)
+        out["sent"] = (pos - neg) / (pos + neg + 5)
     return out
 
 
 def growth(hist, idx, now):
     """% change vs ~30 days ago (or the oldest snapshot if newer). Returns (pct, age_days)."""
-    cur = hist[-1][idx]
+    val = lambda e: e[idx] if len(e) > idx else None
+    cur = val(hist[-1])
     old = next((h for h in hist if h[0] >= (now - timedelta(days=30)).isoformat()), hist[0])
     age = (now - datetime.fromisoformat(old[0])).total_seconds() / 86400
-    if age < 1 or not old[idx] or cur is None:
+    if age < 1 or not val(old) or cur is None:
         return 0.0, age
-    return (cur / old[idx] - 1) * 100, age
+    return max(-100, min(1000, (cur / val(old) - 1) * 100)), age
 
 
 def score(rows):
@@ -125,6 +131,8 @@ def main():
         raise SystemExit("Missing LASTFM_KEY secret")
     names = [x.strip() for x in open("artists.txt") if x.strip()]
     state = json.load(open("state.json")) if os.path.exists("state.json") else {}
+    if state.get("v") != 2:
+        state = {"v": 2, "channels": state.get("channels", {})}
     chans, hist, peaks = state.setdefault("channels", {}), state.setdefault("hist", {}), state.setdefault("peak", {})
     now = datetime.now(timezone.utc)
     rows, unmatched, maxage = [], [], 0
@@ -137,19 +145,20 @@ def main():
         yt = youtube(n, chans) if YT else {}
         h = hist.setdefault(n, [])
         if not h or (now - datetime.fromisoformat(h[-1][0])).total_seconds() > 5 * 3600:
-            h.append([now.isoformat(), lf["l"], lf["p"], dz])
+            h.append([now.isoformat(), lf["l"], lf["p"], dz, yt.get("views")])
         cutoff = (now - timedelta(days=60)).isoformat()
         hist[n] = h = [x for x in h if x[0] >= cutoff]
         g, a1 = growth(h, 1, now)
         tt, _ = growth(h, 2, now)
         pv, _ = growth(h, 3, now) if dz else (0.0, 0)
+        dc, _ = growth(h, 4, now)
         maxage = max(maxage, a1)
         rows.append({"n": n, "lf": lf["lf"], "ml": round(lf["l"] / 1e6, 3), "g": g, "pv": pv, "tt": tt,
-                     "yt": yt.get("yt"), "sent": yt.get("sent"), "disc": yt.get("disc")})
+                     "yt": yt.get("yt"), "sent": yt.get("sent"), "disc": dc})
         time.sleep(.2)
     if len(rows) < 3:
         raise SystemExit("Fewer than 3 artists matched. Check LASTFM_KEY and artists.txt")
-    for k in ("yt", "sent", "disc"):  # missing values become the group median
+    for k in ("yt", "sent"):  # missing values become the group median
         have = [r[k] for r in rows if r[k] is not None]
         med = statistics.median(have) if have else 0
         for r in rows:

@@ -177,7 +177,8 @@ def score(rows):
 def main():
     if not LFM:
         raise SystemExit("Missing LASTFM_KEY secret")
-    names = [x.strip() for x in open("artists.txt") if
+    names = [x.strip() for x in open("artists.txt") if x.strip()]
+    
       for k in ("g", "g7", "pv", "tt", "yt", "disc"):
             r[k] = round(r[k], 1)
         r["sent"] = round(r["sent"], 2)

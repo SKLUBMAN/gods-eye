@@ -31,7 +31,6 @@ nav button[aria-selected=true]{background:var(--tx);color:var(--bg);border-color
 .empty{color:var(--mut);padding:24px 4px;text-align:center}
 .tools{display:flex;gap:6px;margin-bottom:8px}.tools input,.tools select{background:var(--panel);color:var(--tx);border:1px solid var(--line);border-radius:10px;padding:10px;font:inherit}.tools input{flex:1;min-width:0}
 .legend{font-size:12px;color:var(--mut);margin:2px 2px 10px}
-.fab{position:fixed;right:14px;bottom:calc(14px + env(safe-area-inset-bottom,0px));background:var(--tx);color:var(--bg);border:0;border-radius:99px;padding:12px 18px;font:inherit;font-weight:700}
 .sheet{position:fixed;inset:0;background:rgba(5,5,20,.6);display:none;align-items:flex-end;z-index:5}
 .sheet.on{display:flex}
 .card{background:var(--panel);width:100%;max-width:560px;margin:auto;border-radius:20px 20px 0 0;padding:18px 16px calc(18px + env(safe-area-inset-bottom,0px));max-height:88%;overflow:auto}
@@ -65,7 +64,6 @@ textarea{width:100%;height:170px;background:var(--bg);color:var(--tx);border:1px
 <div class="sheet" id="sheet"><div class="card" id="card"></div></div>
 
 <script>
-// Sample data
 const SAMPLE=[
 {n:"Vanta Reyes",ml:18.2,g:2,pv:55,yt:5.1,sent:.45,disc:4,tt:6,org:.6,peak:82},
 {n:"Kilo Marlowe",ml:6.4,g:31,pv:88,yt:7.2,sent:.7,disc:120,tt:210,org:.82,peak:74},
@@ -108,9 +106,9 @@ function view(){
   if(SORT!=="sc")rows.sort((a,b)=>(SORT==="drift"?b.drift-a.drift:(b[SORT]||0)-(a[SORT]||0)));
   $("#list").innerHTML=rows.length?rows.map((a,i)=>{
     const dr=Math.round(a.drift*100),col=tab==="fade"?"var(--dn)":"var(--up)";
-    return `<button class="row" data-i="${all.indexOf(a)}"><div class="r1"><span class="nm">${esc(a.n)}</span><span class="ml">${a.ml}M on Last.fm</span><span class="sc">${a.sc}</span></div>
-<div class="bar"><i style="width:${a.sc}%;background:${col}"></i><b style="left:calc(${Math.min(100,a.peak)}% - 1px)"></b></div>
-<div class="r2"><span class="${a.g>=0?"ok":"dn"}">${a.g>=0?"+":""}${Math.round(a.g)}% listeners</span><span class="${dr<-12?"dn":"ok"}">${dr>0?"+":""}${dr}% vs peak</span></div></button>`}).join(""):'<div class="empty">Nobody matches this view yet. Edit the data to add artists.</div>';
+    return '<button class="row" data-i="'+all.indexOf(a)+'"><div class="r1"><span class="nm">'+esc(a.n)+'</span><span class="ml">'+a.ml+'M on Last.fm</span><span class="sc">'+a.sc+'</span></div>'+
+'<div class="bar"><i style="width:'+a.sc+'%;background:'+col+'"></i><b style="left:calc('+Math.min(100,a.peak)+'% - 1px)"></b></div>'+
+'<div class="r2"><span class="'+(a.g>=0?"ok":"dn")+'">'+(a.g>=0?"+":"")+Math.round(a.g)+'% listeners</span><span class="'+(dr<-12?"dn":"ok")+'">'+(dr>0?"+":"")+dr+'% vs peak</span></div></button>'}).join(""):'<div class="empty">Nobody matches this view yet. Edit the data to add artists.</div>';
   window._all=all;
 }
 
@@ -126,31 +124,45 @@ function read(a){
   return t.join(" ");
 }
 
-function open(i){
-  const a=window._all[i];
-  $("#card").innerHTML=`<h2>${esc(a.n)}</h2><div class="note">${a.ml}M Last.fm listeners · score ${a.sc} · peak ${a.peak}${a.lf?" · matched “"+esc(a.lf)+"” on Last.fm":""}</div>
-${Object.keys(W).map(k=>`<div class="m"><span>${LBL[k]}</span><div class="bar"><i style="width:${a.parts[k]}%;background:var(--up)"></i></div><span>${a.parts[k]}</span></div>`).join("")}
-${spark(a)}<div class="read">${a.ai?"<b>AI read:</b> "+esc(a.ai):read(a)}</div>
-<p class="note">${a.ai?"The AI read is written by Gemini from these numbers and can be wrong.":"This read comes from simple rules on the numbers above."} It can’t judge how good the music is, only how the numbers are moving. If the numbers look wrong, check the matched name above is the right artist.</p>
-<div class="btns"><button class="go" id="x">Close</button></div>`;
-  $("#sheet").classList.add("on");
-  $("#x").onclick=close;
-}
-
 function spark(a){
   const s=(a.s||[]).map(p=>p[1]);
   if(s.length<2)return '<p class="note">The listener chart appears after a day or two of tracking.</p>';
   const mn=Math.min(...s),r=(Math.max(...s)-mn)||1;
   const pts=s.map((v,i)=>(i/(s.length-1)*300).toFixed(1)+","+(46-(v-mn)/r*40).toFixed(1)).join(" ");
-  return `<div class="note">Last.fm listeners, ${a.s[0][0].slice(5,10)} to ${a.s[a.s.length-1][0].slice(5,10)}</div><svg viewBox="0 0 300 50" width="100%" height="70" preserveAspectRatio="none" role="img" aria-label="Listener trend"><polyline points="${pts}" fill="none" stroke="var(--up)" stroke-width="2" vector-effect="non-scaling-stroke"/></svg>`;
+  return '<div class="note">Last.fm listeners, '+a.s[0][0].slice(5,10)+' to '+a.s[a.s.length-1][0].slice(5,10)+'</div><svg viewBox="0 0 300 50" width="100%" height="70" preserveAspectRatio="none" role="img" aria-label="Listener trend"><polyline points="'+pts+'" fill="none" stroke="var(--up)" stroke-width="2" vector-effect="non-scaling-stroke"/></svg>';
+}
+
+function open(i){
+  const a=window._all[i];
+  let barsHTML="";
+  for(const k of Object.keys(W)){
+    barsHTML+='<div class="m"><span>'+LBL[k]+'</span><div class="bar"><i style="width:'+a.parts[k]+}%;background:var(--up)"></i></div><span>'+a.parts[k]+'</span></div>';
+  }
+  let aiRead=a.ai?"<b>AI read:</b> "+esc(a.ai):read(a);
+  let noteText=a.ai?"The AI read is written by Gemini from these numbers and can be wrong.":"This read comes from simple rules on the numbers above.";
+  
+  let html='<h2>'+esc(a.n)+'</h2>'+
+           '<div class="note">'+a.ml+'M Last.fm listeners · score '+a.sc+' · peak '+a.peak+(a.lf?' · matched “'+esc(a.lf)+'” on Last.fm':'')+'</div>'+
+           barsHTML+
+           spark(a)+
+           '<div class="read">'+aiRead+'</div>'+
+           '<p class="note">'+noteText+' It can’t judge how good the music is, only how the numbers are moving. If the numbers look wrong, check the matched name above is the right artist.</p>'+
+           '<div class="btns"><button class="go" id="x">Close</button></div>';
+
+  $("#card").innerHTML=html;
+  $("#sheet").classList.add("on");
+  $("#x").onclick=close;
 }
 
 function close(){$("#sheet").classList.remove("on")}
 
 function editor(){
-  $("#card").innerHTML=`<h2>Your data</h2><p class="note">Paste a JSON list of artists to replace the sample. Fields: n, ml, g, pv, yt, sent, disc, tt, org, peak.</p>
-<textarea id="ta" spellcheck="false">${esc(JSON.stringify(data,null,1))}</textarea><div class="note" id="err" style="color:var(--dn)"></div>
-<div class="btns"><button id="rs">Reset sample</button><button class="go" id="ap">Apply</button></div>`;
+  let html='<h2>Your data</h2>'+
+           '<p class="note">Paste a JSON list of artists to replace the sample. Fields: n, ml, g, pv, yt, sent, disc, tt, org, peak.</p>'+
+           '<textarea id="ta" spellcheck="false">'+esc(JSON.stringify(data,null,1))+'</textarea>'+
+           '<div class="note" id="err" style="color:var(--dn)"></div>'+
+           '<div class="btns"><button id="rs">Reset sample</button><button class="go" id="ap">Apply</button></div>';
+  $("#card").innerHTML=html;
   $("#sheet").classList.add("on");
   $("#rs").onclick=()=>{location.reload()};
   $("#ap").onclick=()=>{try{const d=JSON.parse($("#ta").value);if(!Array.isArray(d)||d.length<3)throw Error("Need a list of at least 3 artists.");data=d;$("#tag").textContent="Your data";view();close()}catch(e){$("#err").textContent="Couldn’t read that: "+e.message}};
@@ -167,75 +179,9 @@ fetch("data.json?"+Date.now()).then(r=>r.json()).then(j=>{
  data=j.artists;
  $("#tag").textContent="Updated "+new Date(j.updated).toLocaleString([],{month:"short",day:"numeric",hour:"numeric",minute:"2-digit"});
  let f=j.history_days<2?"Growth and peak numbers fill in after a few days of tracking. Until then rankings lean on YouTube data. ":"";
- if(j.unmatched&&j.unmatched.length)f+="Couldn’t match on Last.fm: "+j.unmatched.map(esc).join(", ")+".";
+ if(j.unmatched&&j.unmatched.length)f+="Couldn’t match on Last.fm: "+j.unmatched.map(esc).join(", ")+";";
  $("#foot").innerHTML=f;view();
 }).catch(()=>view());
-</script>
-</body>
-</html>
-<h2>${esc(a.n)}</h2><div class="note">${a.ml}M Last.fm listeners · score ${a.sc} · peak ${a.peak}${a.lf?" · matched “"+esc(a.lf)+"” on Last.fm":""}</div>
-${Object.keys(W).map(k=>`<div class="m"><span>${LBL[k]}</span><div class="bar"><i style="width:${a.parts[k]}%;background:var(--up)"></i></div><span>${a.parts[k]}</span></div>`).join("")}
-${spark(a)}<div class="read">${a.ai?"<b>AI read:</b> "+esc(a.ai):read(a)}</div>
-<p class="note">${a.ai?"The AI read is written by Gemini from these numbers and can be wrong.":"This read comes from simple rules on the numbers above."} It can’t judge how good the music is, only how the numbers are moving. If the numbers look wrong, check the matched name above is the right artist.</p>
-<div class="btns"><button class="go" id="x">Close</button></div>`;
-  $("#sheet").classList.add("on");$("#x").onclick=close;
-}
-function spark(a){
-  const s=(a.s||[]).map(p=>p[1]);
-  if(s.length<2)return '<p class="note">The listener chart appears after a day or two of tracking.</p>';
-  const mn=Math.min(...s),r=(Math.max(...s)-mn)||1;
-  const pts=s.map((v,i)=>(i/(s.length-1)*300).toFixed(1)+","+(46-(v-mn)/r*40).toFixed(1)).join(" ");
-  return `<div class="note">Last.fm listeners, ${a.s[0][0].slice(5,10)} to ${a.s[a.s.length-1][0].slice(5,10)}</div><svg viewBox="0 0 300 50" width="100%" height="70" preserveAspectRatio="none" role="img" aria-label="Listener trend"><polyline points="${pts}" fill="none" stroke="var(--up)" stroke-width="2" vector-effect="non-scaling-stroke"/></svg>`;
-}
-function close(){$("#sheet").classList.remove("on")}
-function editor(){
-  $("#card").innerHTML=`<h2>Your data</h2><p class="note">Paste a JSON list of artists to replace the sample. Fields: n, ml, g, pv, yt, sent, disc, tt, org, peak.</p>
-<textarea id="ta" spellcheck="false">${esc(JSON.stringify(data,null,1))}</textarea><div class="note" id="err" style="color:var(--dn)"></div>
-<div class="btns"><button id="rs">Reset sample</button><button class="go" id="ap">Apply</button></div>`;
-  $("#sheet").classList.add("on");
-  $("#rs").onclick=()=>{location.reload()};
-  $("#ap").onclick=()=>{try{const d=JSON.parse($("#ta").value);if(!Array.isArray(d)||d.length<3)throw Error("Need a list of at least 3 artists.");data=d;$("#tag").textContent="Your data";view();close()}catch(e){$("#err").textContent="Couldn’t read that: "+e.message}};
-}
-$("#tabs").onclick=e=>{const b=e.target.closest("button");if(!b)return;tab=b.dataset.t;document.querySelectorAll("#tabs button").forEach(x=>x.setAttribute("aria-selected",x===b));view()};
-$("#list").onclick=e=>{const r=e.target.closest(".row");if(r)open(+r.dataset.i)};
-$("#q").oninput=e=>{Q=e.target.value.toLowerCase();view()};$("#sort").onchange=e=>{SORT=e.target.value;view()};
-$("#sheet").onclick=e=>{if(e.target.id==="sheet")close()};
-fetch("data.json?"+Date.now()).then(r=>r.json()).then(j=>{
- if(!j.artists||j.artists.length<3)throw 0;
- data=j.artists;
- $("#tag").textContent="Updated "+new Date(j.updated).toLocaleString([],{month:"short",day:"numeric",hour:"numeric",minute:"2-digit"});
- let f=j.history_days<2?"Growth and peak numbers fill in after a few days of tracking. Until then rankings lean on YouTube data. ":"";
- if(j.unmatched&&j.unmatched.length)f+="Couldn’t match on Last.fm: "+j.unmatched.map(esc).join(", ")+".";
- $("#foot").innerHTML=f;view();
-}).catch(()=>view());
-</script>
-</body>
-</html>
-tton></div>`;
-  $("#sheet").classList.add("on");$("#x").onclick=close;
-}
-function close(){$("#sheet").classList.remove("on")}
-function editor(){
-  $("#card").innerHTML=`<h2>Your data</h2><p class="note">Paste a JSON list of artists to replace the sample. Fields: n, ml, g, pv, yt, sent, disc, tt, org, peak.</p>
-<textarea id="ta" spellcheck="false">${esc(JSON.stringify(data,null,1))}</textarea><div class="note" id="err" style="color:var(--dn)"></div>
-<div class="btns"><button id="rs">Reset sample</button><button class="go" id="ap">Apply</button></div>`;
-  $("#sheet").classList.add("on");
-  $("#rs").onclick=()=>{location.reload()};
-  $("#ap").onclick=()=>{try{const d=JSON.parse($("#ta").value);if(!Array.isArray(d)||d.length<3)throw Error("Need a list of at least 3 artists.");data=d;$("#tag").textContent="Your data";view();close()}catch(e){$("#err").textContent="Couldn’t read that: "+e.message}};
-}
-$("#tabs").onclick=e=>{const b=e.target.closest("button");if(!b)return;tab=b.dataset.t;document.querySelectorAll("#tabs button").forEach(x=>x.setAttribute("aria-selected",x===b));view()};
-$("#list").onclick=e=>{const r=e.target.closest(".row");if(r)open(+r.dataset.i)};
-$("#edit").onclick=editor;
-$("#sheet").onclick=e=>{if(e.target.id==="sheet")close()};
-fetch("data.json?"+Date.now()).then(r=>r.json()).then(j=>{
- if(!j.artists||j.artists.length<3)throw 0;
- data=j.artists;
- $("#tag").textContent="Updated "+new Date(j.updated).toLocaleString([],{month:"short",day:"numeric",hour:"numeric",minute:"2-digit"});
- let f=j.history_days<2?"Growth and peak numbers fill in after a few days of tracking. Until then rankings lean on YouTube data. ":"";
- if(j.unmatched&&j.unmatched.length)f+="Couldn’t match on Last.fm: "+j.unmatched.map(esc).join(", ")+".";
- $("#foot").innerHTML=f;view();
-}).catch(()=>view());
-
 </script>
 </body>
 </html>
